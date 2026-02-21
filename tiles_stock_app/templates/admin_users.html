@@ -1,0 +1,36 @@
+<h2>All Users</h2>
+<a href="/admin/add_user">Add User</a>
+<br><br>
+
+<table border="1">
+<tr>
+    <th>ID</th>
+    <th>Username</th>
+    <th>Email</th>
+    <th>Role</th>
+    <th>Status</th>
+    <th>Actions</th>
+</tr>
+
+{% for user in users %}
+<tr>
+    <td>{{ user.id }}</td>
+    <td>{{ user.username }}</td>
+    <td>{{ user.email }}</td>
+    <td>{{ user.role }}</td>
+    <td>
+        {% if user.is_active %}
+            Active
+        {% else %}
+            Inactive
+        {% endif %}
+    </td>
+    <td>
+        <a href="/admin/toggle_user/{{ user.id }}">Toggle</a>
+        {% if user.role != 'admin' %}
+            | <a href="/admin/delete_user/{{ user.id }}">Delete</a>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+</table>
