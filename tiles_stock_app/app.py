@@ -1,19 +1,15 @@
 from flask import (
     Flask, render_template, request, redirect,
-    session, flash, make_response, url_for
+    session, flash, url_for
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-from sqlalchemy import func
 from functools import wraps
-import io
 import os
 
 # ================= APP SETUP =================
 app = Flask(__name__)
-
-# Secure secret key
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 # ================= DATABASE CONFIG =================
@@ -36,7 +32,6 @@ class User(db.Model):
     role = db.Column(db.String(10), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
 class Tile(db.Model):
@@ -58,21 +53,11 @@ class Bill(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-class BillItem(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    bill_id = db.Column(db.Integer, db.ForeignKey('bill.id'))
-    tile_name = db.Column(db.String(150))
-    size = db.Column(db.String(50))
-    price = db.Column(db.Float)
-    quantity = db.Column(db.Integer)
-    total = db.Column(db.Float)
-
 # ================= DATABASE AUTO CREATE =================
 with app.app_context():
     db.create_all()
 
-    # Create default admin if none exists
-    if not User.query.first():
+    if not User.query.filter_by(username="admin").first():
         admin = User(
             username='admin',
             email='admin@example.com',
@@ -82,14 +67,13 @@ with app.app_context():
         )
         db.session.add(admin)
         db.session.commit()
-        print("Default admin created")
 
 # ================= DECORATORS =================
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            flash('Please login first')
+            flash("Please login first")
             return redirect('/')
         return f(*args, **kwargs)
     return decorated_function
@@ -101,40 +85,37 @@ def admin_required(f):
         if 'user_id' not in session:
             return redirect('/')
         if session.get('role') != 'admin':
-            flash('Admin access required')
+            flash("Admin access required")
             return redirect('/dashboard')
         return f(*args, **kwargs)
     return decorated_function
 
-# ================= LOGIN =================
+# ================= ROUTE CHECK =================
 @app.route('/routes')
-def list_routes():
-    output = []
-    for rule in app.url_map.iter_rules():
-        output.append(str(rule))
-    return "<br>".join(output)
+def routes():
+    return "<br>".join([str(rule) for rule in app.url_map.iter_rules()])
 
+
+# ================= LOGIN =================
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if 'user_id' in session:
         return redirect('/dashboard')
 
     if request.method == 'POST':
-        user = User.query.filter_by(
-            username=request.form['username']
-        ).first()
+        user = User.query.filter_by(username=request.form['username']).first()
 
         if user and check_password_hash(user.password, request.form['password']):
             if not user.is_active:
-                flash('Account deactivated')
+                flash("Account deactivated")
                 return render_template('login.html')
 
             session['user_id'] = user.id
             session['role'] = user.role
-            session['user'] = user.username
+            session['username'] = user.username
             return redirect('/dashboard')
 
-        flash('Invalid credentials')
+        flash("Invalid credentials")
 
     return render_template('login.html')
 
@@ -144,12 +125,14 @@ def logout():
     session.clear()
     return redirect('/')
 
+
 # ================= DASHBOARD =================
 @app.route('/dashboard')
 @login_required
 def dashboard():
     tiles = Tile.query.all()
     return render_template('dashboard.html', tiles=tiles)
+
 
 # ================= ADD TILE =================
 @app.route('/add_tile', methods=['GET', 'POST'])
@@ -165,9 +148,71 @@ def add_tile():
         )
         db.session.add(tile)
         db.session.commit()
+        flash("Tile added successfully")
         return redirect('/dashboard')
 
     return render_template('add_tile.html')
+
+
+# ================= ADMIN - USERS =================
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('admin_users.html', users=users)
+
+
+# ================= ADMIN - ADD USER =================
+@app.route('/admin/add_user', methods=['GET', 'POST'])
+@admin_required
+def add_user():
+    if request.method == 'POST':
+        new_user = User(
+            username=request.form['username'],
+            email=request.form['email'],
+            password=generate_password_hash(request.form['password']),
+            role=request.form['role'],
+            is_active=True
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        flash("User created successfully")
+        return redirect('/admin/users')
+
+    return render_template('add_user.html')
+
+
+# ================= ADMIN - TOGGLE USER =================
+@app.route('/admin/toggle_user/<int:user_id>')
+@admin_required
+def toggle_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.username == "admin":
+        flash("Cannot deactivate main admin")
+        return redirect('/admin/users')
+
+    user.is_active = not user.is_active
+    db.session.commit()
+    flash("User status updated")
+    return redirect('/admin/users')
+
+
+# ================= ADMIN - DELETE USER =================
+@app.route('/admin/delete_user/<int:user_id>')
+@admin_required
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.username == "admin":
+        flash("Cannot delete main admin")
+        return redirect('/admin/users')
+
+    db.session.delete(user)
+    db.session.commit()
+    flash("User deleted successfully")
+    return redirect('/admin/users')
+
 
 # ================= HISTORY =================
 @app.route('/history')
@@ -176,7 +221,7 @@ def history():
     bills = Bill.query.order_by(Bill.date.desc()).all()
     return render_template('history.html', bills=bills)
 
+
 # ================= RUN LOCAL =================
 if __name__ == '__main__':
     app.run(debug=True)
-
