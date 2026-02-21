@@ -171,8 +171,16 @@ def delete_tile(id):
     tile = Tile.query.get_or_404(id)
     db.session.delete(tile)
     db.session.commit()
-    flash("Tile deleted")
+    flash("Tile deleted successfully")
     return redirect("/dashboard")
+
+
+# ================= USER MANAGEMENT =================
+@app.route("/user_management")
+@admin_required
+def user_management():
+    users = User.query.all()
+    return render_template("user_management.html", users=users)
 
 
 # ================= BILLING =================
@@ -217,6 +225,28 @@ def billing():
         return redirect(url_for("invoice", bill_id=bill.id))
 
     return render_template("billing.html", tiles=tiles)
+
+
+# ================= SALES HISTORY =================
+@app.route("/sales_history")
+@login_required
+def sales_history():
+    bills = Bill.query.order_by(Bill.date.desc()).all()
+    return render_template("history.html", bills=bills)
+
+
+# ================= SALES REPORT =================
+@app.route("/sales_report")
+@admin_required
+def sales_report():
+    total_sales = db.session.query(func.sum(Bill.total)).scalar() or 0
+    total_bills = Bill.query.count()
+
+    return render_template(
+        "sales_report.html",
+        total_sales=total_sales,
+        total_bills=total_bills
+    )
 
 
 # ================= INVOICE =================
