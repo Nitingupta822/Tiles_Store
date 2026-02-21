@@ -107,6 +107,13 @@ def admin_required(f):
     return decorated_function
 
 # ================= LOGIN =================
+@app.route('/routes')
+def list_routes():
+    output = []
+    for rule in app.url_map.iter_rules():
+        output.append(str(rule))
+    return "<br>".join(output)
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if 'user_id' in session:
@@ -172,3 +179,4 @@ def history():
 # ================= RUN LOCAL =================
 if __name__ == '__main__':
     app.run(debug=True)
+
