@@ -1,5 +1,5 @@
 Flask==3.0.3
-Flask-SQLAlchemy==3.1.2
+Flask-SQLAlchemy==3.1.1
 Werkzeug==3.0.6
 SQLAlchemy==2.0.36
 xhtml2pdf==0.2.11
