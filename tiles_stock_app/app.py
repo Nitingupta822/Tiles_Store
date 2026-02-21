@@ -1,16 +1,18 @@
 from flask import (
     Flask, render_template, request, redirect,
-    session, flash, url_for
+    session, flash, make_response, url_for
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from sqlalchemy import func
 from functools import wraps
+import io
 import os
 
 # ================= APP SETUP =================
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key')
 
 # ================= DATABASE CONFIG =================
 database_url = os.environ.get('DATABASE_URL')
@@ -18,7 +20,7 @@ database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or "sqlite:///database.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -48,67 +50,76 @@ class Bill(db.Model):
     customer_name = db.Column(db.String(150))
     customer_mobile = db.Column(db.String(15))
     total = db.Column(db.Float, nullable=False)
-    gst = db.Column(db.Float, nullable=False)
-    discount = db.Column(db.Float, nullable=False)
+    gst = db.Column(db.Float, default=0)
+    discount = db.Column(db.Float, default=0)
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-# ================= DATABASE AUTO CREATE =================
-with app.app_context():
+class BillItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    bill_id = db.Column(db.Integer, db.ForeignKey('bill.id'))
+    tile_name = db.Column(db.String(150))
+    size = db.Column(db.String(50))
+    price = db.Column(db.Float)
+    quantity = db.Column(db.Integer)
+    total = db.Column(db.Float)
+
+
+# ================= DATABASE INIT =================
+def init_db():
     db.create_all()
 
     if not User.query.filter_by(username="admin").first():
         admin = User(
-            username='admin',
-            email='admin@example.com',
-            password=generate_password_hash('admin123'),
-            role='admin',
+            username="admin",
+            email="admin@example.com",
+            password=generate_password_hash("admin123"),
+            role="admin",
             is_active=True
         )
         db.session.add(admin)
         db.session.commit()
 
+
+with app.app_context():
+    init_db()
+
 # ================= DECORATORS =================
 def login_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         if 'user_id' not in session:
             flash("Please login first")
             return redirect('/')
         return f(*args, **kwargs)
-    return decorated_function
+    return wrapper
 
 
 def admin_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         if 'user_id' not in session:
             return redirect('/')
-        if session.get('role') != 'admin':
+        if session.get('role') != "admin":
             flash("Admin access required")
             return redirect('/dashboard')
         return f(*args, **kwargs)
-    return decorated_function
-
-# ================= ROUTE CHECK =================
-@app.route('/routes')
-def routes():
-    return "<br>".join([str(rule) for rule in app.url_map.iter_rules()])
+    return wrapper
 
 
-# ================= LOGIN =================
-@app.route('/', methods=['GET', 'POST'])
+# ================= AUTH =================
+@app.route("/", methods=["GET", "POST"])
 def login():
     if 'user_id' in session:
         return redirect('/dashboard')
 
-    if request.method == 'POST':
+    if request.method == "POST":
         user = User.query.filter_by(username=request.form['username']).first()
 
         if user and check_password_hash(user.password, request.form['password']):
             if not user.is_active:
                 flash("Account deactivated")
-                return render_template('login.html')
+                return render_template("login.html")
 
             session['user_id'] = user.id
             session['role'] = user.role
@@ -117,28 +128,28 @@ def login():
 
         flash("Invalid credentials")
 
-    return render_template('login.html')
+    return render_template("login.html")
 
 
-@app.route('/logout')
+@app.route("/logout")
 def logout():
     session.clear()
-    return redirect('/')
+    return redirect("/")
 
 
 # ================= DASHBOARD =================
-@app.route('/dashboard')
+@app.route("/dashboard")
 @login_required
 def dashboard():
     tiles = Tile.query.all()
-    return render_template('dashboard.html', tiles=tiles)
+    return render_template("dashboard.html", tiles=tiles)
 
 
-# ================= ADD TILE =================
-@app.route('/add_tile', methods=['GET', 'POST'])
+# ================= TILE CRUD =================
+@app.route("/add_tile", methods=["GET", "POST"])
 @admin_required
 def add_tile():
-    if request.method == 'POST':
+    if request.method == "POST":
         tile = Tile(
             brand=request.form['brand'],
             size=request.form['size'],
@@ -149,79 +160,99 @@ def add_tile():
         db.session.add(tile)
         db.session.commit()
         flash("Tile added successfully")
-        return redirect('/dashboard')
+        return redirect("/dashboard")
 
-    return render_template('add_tile.html')
+    return render_template("add_tile.html")
 
 
-# ================= ADMIN - USERS =================
-@app.route('/admin/users')
+@app.route("/delete_tile/<int:id>")
 @admin_required
-def admin_users():
-    users = User.query.order_by(User.created_at.desc()).all()
-    return render_template('admin_users.html', users=users)
-
-
-# ================= ADMIN - ADD USER =================
-@app.route('/admin/add_user', methods=['GET', 'POST'])
-@admin_required
-def add_user():
-    if request.method == 'POST':
-        new_user = User(
-            username=request.form['username'],
-            email=request.form['email'],
-            password=generate_password_hash(request.form['password']),
-            role=request.form['role'],
-            is_active=True
-        )
-        db.session.add(new_user)
-        db.session.commit()
-        flash("User created successfully")
-        return redirect('/admin/users')
-
-    return render_template('add_user.html')
-
-
-# ================= ADMIN - TOGGLE USER =================
-@app.route('/admin/toggle_user/<int:user_id>')
-@admin_required
-def toggle_user(user_id):
-    user = User.query.get_or_404(user_id)
-
-    if user.username == "admin":
-        flash("Cannot deactivate main admin")
-        return redirect('/admin/users')
-
-    user.is_active = not user.is_active
+def delete_tile(id):
+    tile = Tile.query.get_or_404(id)
+    db.session.delete(tile)
     db.session.commit()
-    flash("User status updated")
-    return redirect('/admin/users')
+    flash("Tile deleted")
+    return redirect("/dashboard")
 
 
-# ================= ADMIN - DELETE USER =================
-@app.route('/admin/delete_user/<int:user_id>')
-@admin_required
-def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-
-    if user.username == "admin":
-        flash("Cannot delete main admin")
-        return redirect('/admin/users')
-
-    db.session.delete(user)
-    db.session.commit()
-    flash("User deleted successfully")
-    return redirect('/admin/users')
-
-
-# ================= HISTORY =================
-@app.route('/history')
+# ================= BILLING =================
+@app.route("/billing", methods=["GET", "POST"])
 @login_required
-def history():
-    bills = Bill.query.order_by(Bill.date.desc()).all()
-    return render_template('history.html', bills=bills)
+def billing():
+    tiles = Tile.query.all()
+
+    if request.method == "POST":
+        bill = Bill(
+            customer_name=request.form.get("customer_name"),
+            customer_mobile=request.form.get("customer_mobile"),
+            total=0,
+            gst=float(request.form.get("gst", 0)),
+            discount=float(request.form.get("discount", 0))
+        )
+        db.session.add(bill)
+        db.session.commit()
+
+        subtotal = 0
+
+        for tile in tiles:
+            qty = int(request.form.get(f"qty_{tile.id}", 0))
+            if qty > 0 and tile.quantity >= qty:
+                tile.quantity -= qty
+                item_total = tile.price * qty
+                subtotal += item_total
+
+                item = BillItem(
+                    bill_id=bill.id,
+                    tile_name=tile.brand,
+                    size=tile.size,
+                    price=tile.price,
+                    quantity=qty,
+                    total=item_total
+                )
+                db.session.add(item)
+
+        bill.total = subtotal + (subtotal * bill.gst / 100) - bill.discount
+        db.session.commit()
+
+        return redirect(url_for("invoice", bill_id=bill.id))
+
+    return render_template("billing.html", tiles=tiles)
 
 
-# ================= RUN LOCAL =================
-if __name__ == '__main__':
+# ================= INVOICE =================
+@app.route("/invoice/<int:bill_id>")
+@login_required
+def invoice(bill_id):
+    bill = Bill.query.get_or_404(bill_id)
+    items = BillItem.query.filter_by(bill_id=bill_id).all()
+    return render_template("invoice.html", bill=bill, items=items)
+
+
+@app.route("/invoice_pdf/<int:bill_id>")
+@login_required
+def invoice_pdf(bill_id):
+    from xhtml2pdf import pisa
+
+    bill = Bill.query.get_or_404(bill_id)
+    items = BillItem.query.filter_by(bill_id=bill_id).all()
+
+    html = render_template("invoice_pdf.html", bill=bill, items=items)
+
+    result = io.BytesIO()
+    pisa.CreatePDF(html, dest=result)
+
+    response = make_response(result.getvalue())
+    response.headers['Content-Type'] = "application/pdf"
+    response.headers['Content-Disposition'] = f"attachment; filename=invoice_{bill.id}.pdf"
+    return response
+
+
+# ================= HEALTH CHECK =================
+@app.route("/health")
+def health():
+    return "App is running successfully!"
+
+
+# ================= LOCAL RUN =================
+if __name__ == "__main__":
     app.run(debug=True)
