@@ -437,10 +437,11 @@
         <span>New Bill</span>
       </a>
 
-      <a href="/history" class="sidebar-link {{ 'active' if request.path == '/history' else '' }}">
-        <i class="bi bi-clock-history"></i>
-        <span>Sales History</span>
-      </a>
+        <a href="{{ url_for('sales_history') }}"
+     class="sidebar-link {{ 'active' if request.path == url_for('sales_history') else '' }}">
+    <i class="bi bi-clock-history"></i>
+    <span>Sales History</span>
+  </a>
 
       <a href="/sales_report" class="sidebar-link {{ 'active' if request.path == '/sales_report' else '' }}">
         <i class="bi bi-graph-up-arrow"></i>
@@ -455,10 +456,11 @@
         <span>Add Tile</span>
       </a>
 
-      <a href="/admin/users" class="sidebar-link {{ 'active' if '/admin/users' in request.path else '' }}">
-        <i class="bi bi-people"></i>
-        <span>User Management</span>
-      </a>
+  <a href="{{ url_for('user_management') }}"
+     class="sidebar-link {{ 'active' if request.path == url_for('user_management') else '' }}">
+    <i class="bi bi-people"></i>
+    <span>User Management</span>
+  </a>
       {% endif %}
 
       <div class="sidebar-section mt-3">Account</div>
@@ -621,5 +623,6 @@
 
   {% block extra_js %}{% endblock %}
 </body>
+
 
 </html>
