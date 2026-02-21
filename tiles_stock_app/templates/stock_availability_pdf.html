@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Helvetica;
+            font-size: 11px;
+        }
+
+        h2,
+        h3 {
+            text-align: center;
+            margin: 5px 0;
+        }
+
+        .report-info {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #666;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .left {
+            text-align: left;
+        }
+
+        .stock-out {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .stock-low {
+            color: #fd7e14;
+            font-weight: bold;
+        }
+
+        .stock-good {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .summary-table {
+            margin-top: 20px;
+            width: 50%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            padding: 8px;
+        }
+
+        .text-muted {
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Sita Ram Traders</h2>
+    <h3>Stock Availability Report</h3>
+    <div class="report-info">
+        <p><b>Generated on:</b> {{ current_date }}</p>
+        <p><b>Total Items:</b> {{ tiles|length }}</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Brand</th>
+                <th>Size</th>
+                <th>Buy Price (₹)</th>
+                <th>Sell Price (₹)</th>
+                <th>Margin (%)</th>
+                <th>Current Stock</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if tiles %}
+            {% for tile in tiles %}
+            <tr>
+                <td>{{ tile.id }}</td>
+                <td class="left">{{ tile.brand }}</td>
+                <td>{{ tile.size }}</td>
+                <td class="right">
+                    {% if tile.buy_price %}
+                    {{ "%.2f"|format(tile.buy_price) }}
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td class="right">{{ "%.2f"|format(tile.price) }}</td>
+                <td class="right">
+                    {% if tile.buy_price and tile.price > 0 %}
+                    {% set margin = ((tile.price - tile.buy_price) / tile.price * 100) %}
+                    {{ "%.1f"|format(margin) }}%
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>{{ tile.quantity }}</td>
+                <td>
+                    {% if tile.quantity == 0 %}
+                    <span class="stock-out">Out of Stock</span>
+                    {% elif tile.quantity < 10 %} <span class="stock-low">Low Stock</span>
+                        {% else %}
+                        <span class="stock-good">In Stock</span>
+                        {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="8">No tiles in inventory</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <table class="summary-table">
+        <thead>
+            <tr>
+                <th colspan="2">Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="left">Total Items</td>
+                <td class="right">{{ tiles|length }}</td>
+            </tr>
+            <tr>
+                <td class="left">In Stock (≥10)</td>
+                <td class="right stock-good">{{ tiles|selectattr('quantity', 'ge', 10)|list|length }}</td>
+            </tr>
+            <tr>
+                <td class="left">Low Stock (1-9)</td>
+                <td class="right stock-low">{{ tiles|selectattr('quantity', 'lt', 10)|selectattr('quantity', 'gt',
+                    0)|list|length }}</td>
+            </tr>
+            <tr>
+                <td class="left">Out of Stock</td>
+                <td class="right stock-out">{{ tiles|selectattr('quantity', 'eq', 0)|list|length }}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+
+</html>

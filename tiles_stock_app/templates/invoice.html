@@ -1,0 +1,164 @@
+{% extends 'base.html' %} {% block title %}Invoice #{{ bill.id }}{% endblock %}
+{% block page_title %}Invoice{% endblock %} {% block extra_css %}
+<style>
+  @media print {
+
+    .sidebar,
+    .top-navbar,
+    .no-print {
+      display: none !important;
+    }
+
+    .main-content {
+      margin-left: 0 !important;
+    }
+
+    .content-area {
+      padding: 0 !important;
+    }
+
+    .modern-card {
+      box-shadow: none !important;
+      border: 1px solid #ddd !important;
+    }
+  }
+
+  .invoice-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 2rem;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .invoice-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-size: 0.85rem;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="modern-card mb-4">
+  <!-- Invoice Header -->
+  <div class="invoice-header">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <h3 class="mb-1"><i class="bi bi-receipt me-2"></i>TileStock</h3>
+        <p class="mb-0 opacity-75">Stock Management System</p>
+      </div>
+      <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <span class="invoice-badge">
+          <i class="bi bi-hash"></i> Invoice #{{ bill.id }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <!-- Invoice Info -->
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <h6 class="text-muted text-uppercase small mb-2">Bill To</h6>
+        <h5 class="mb-1">{{ bill.customer_name or 'Walk-in Customer' }}</h5>
+        {% if bill.customer_mobile %}
+        <p class="mb-0">
+          <i class="bi bi-telephone me-1"></i>{{ bill.customer_mobile }}
+        </p>
+        {% endif %}
+      </div>
+      <div class="col-md-6 text-md-end">
+        <h6 class="text-muted text-uppercase small mb-2">Invoice Details</h6>
+        <p class="mb-1">
+          <strong>Date:</strong> {{ bill.date.strftime('%d %B %Y') if bill.date
+          else '—' }}
+        </p>
+        <p class="mb-0">
+          <strong>Billed By:</strong> {{ session.get('user') }}
+        </p>
+      </div>
+    </div>
+
+    <hr />
+
+    <!-- Items Table -->
+    <h6 class="text-muted text-uppercase small mb-3">Items</h6>
+    <div class="table-responsive mb-4">
+      {% set subtotal = namespace(value=0) %}
+      <table class="table modern-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th>Size</th>
+            <th class="text-end">Price</th>
+            <th class="text-center">Qty</th>
+            <th class="text-end">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %} {% set subtotal.value = subtotal.value +
+          item.total %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><strong>{{ item.tile_name }}</strong></td>
+            <td>{{ item.size }}</td>
+            <td class="text-end">₹{{ "%.2f"|format(item.price) }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td class="text-end fw-semibold">
+              ₹{{ "%.2f"|format(item.total) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary -->
+    <div class="row justify-content-end">
+      <div class="col-md-5">
+        <div class="bg-light rounded p-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span>Subtotal</span>
+            <span>₹{{ "%.2f"|format(subtotal.value) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>GST ({{ bill.gst }}%)</span>
+            <span>₹{{ "%.2f"|format(subtotal.value * bill.gst / 100) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Discount</span>
+            <span class="text-danger">-₹{{ "%.2f"|format(bill.discount) }}</span>
+          </div>
+          <hr />
+          <div class="d-flex justify-content-between">
+            <strong class="fs-5">Grand Total</strong>
+            <strong class="fs-5 text-success">₹{{ "%.2f"|format(bill.total) }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex flex-column flex-sm-row gap-2 justify-content-center no-print">
+  <a href="/invoice_pdf/{{ bill.id }}" class="btn btn-outline-danger btn-modern">
+    <i class="bi bi-file-pdf me-1"></i>Download PDF
+  </a>
+  {% if bill.customer_mobile %}
+  <a href="https://wa.me/91{{ bill.customer_mobile }}?text={{ whatsapp_message|urlencode }}" target="_blank"
+    class="btn btn-success btn-modern">
+    <i class="bi bi-whatsapp me-1"></i>Send via WhatsApp
+  </a>
+  {% endif %}
+  <button onclick="window.print()" class="btn btn-outline-secondary btn-modern">
+    <i class="bi bi-printer me-1"></i>Print
+  </button>
+  <a href="/billing" class="btn btn-gradient-success btn-modern">
+    <i class="bi bi-plus-lg me-1"></i>New Bill
+  </a>
+  <a href="/dashboard" class="btn btn-outline-primary btn-modern">
+    <i class="bi bi-arrow-left me-1"></i>Dashboard
+  </a>
+</div>
+{% endblock %}

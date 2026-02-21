@@ -1,0 +1,110 @@
+{% extends 'base.html' %} {% block title %}Sales History{% endblock %} {% block
+page_title %}Sales History{% endblock %} {% block content %}
+<!-- Stats Summary -->
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="stat-label mb-1">Total Invoices</p>
+          <h3 class="stat-value mb-0">{{ bills|length }}</h3>
+        </div>
+        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+          <i class="bi bi-receipt"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="stat-label mb-1">Total Revenue</p>
+          <h3 class="stat-value mb-0">
+            ₹{{ "%.0f"|format(bills|sum(attribute='total')) }}
+          </h3>
+        </div>
+        <div class="stat-icon" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%)">
+          <i class="bi bi-currency-rupee"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sales Table -->
+<div class="modern-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>All Invoices</h5>
+    <a href="/billing" class="btn btn-gradient-success btn-modern btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>New Bill
+    </a>
+  </div>
+
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table modern-table mb-0">
+        <thead>
+          <tr>
+            <th>Invoice #</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Amount</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if bills %} {% for bill in bills %}
+          <tr>
+            <td>
+              <span class="badge bg-secondary">#{{ bill.id }}</span>
+            </td>
+            <td>
+              <strong>{{ bill.customer_name if bill.customer_name else 'Walk-in
+                Customer' }}</strong>
+            </td>
+            <td>
+              <span class="text-muted">
+                <i class="bi bi-calendar me-1"></i>
+                {{ bill.date.strftime('%d %b %Y') if bill.date else '—' }}
+              </span>
+            </td>
+            <td>
+              <span class="fw-bold text-success">₹{{ "%.2f"|format(bill.total or 0) }}</span>
+            </td>
+            <td class="text-end">
+              <a href="/invoice/{{ bill.id }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-eye"></i> View
+              </a>
+              {% if session.get('role') == 'admin' %}
+              <a href="/edit_bill/{{ bill.id }}" class="btn btn-sm btn-outline-warning">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button class="btn btn-sm btn-outline-danger"
+                onclick="confirmDelete('/delete_bill/{{ bill.id }}', 'Invoice #{{ bill.id }}')">
+                <i class="bi bi-trash"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %} {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <i class="bi bi-receipt-cutoff"></i>
+                <h5>No sales yet</h5>
+                <p class="mb-3">Create your first invoice to see it here</p>
+                <a href="/billing" class="btn btn-gradient-primary btn-modern">
+                  <i class="bi bi-plus-lg me-1"></i>Create Invoice
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

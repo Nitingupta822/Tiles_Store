@@ -1,0 +1,64 @@
+{% extends 'base.html' %} {% block title %}Edit Bill{% endblock %} {% block
+page_title %}Edit Bill{% endblock %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="modern-card">
+      <div class="card-header bg-warning bg-opacity-10">
+        <h5 class="mb-0">
+          <i class="bi bi-pencil-fill text-warning me-2"></i>Edit Invoice #{{
+          bill.id }}
+        </h5>
+      </div>
+
+      <div class="card-body">
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label">Customer Name</label>
+            <input type="text" name="customer_name" class="form-control" value="{{ bill.customer_name }}" required />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Mobile Number</label>
+            <input type="tel" name="customer_mobile" class="form-control" value="{{ bill.customer_mobile }}"
+              pattern="[0-9]{10}" maxlength="10" />
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">GST (%)</label>
+                <input type="number" name="gst" class="form-control" value="{{ bill.gst }}" min="0" step="0.01"
+                  required />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Discount (₹)</label>
+                <input type="number" name="discount" class="form-control" value="{{ bill.discount }}" min="0"
+                  step="0.01" required />
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4 p-3 bg-light rounded">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-muted">Current Total:</span>
+              <span class="fs-4 fw-bold text-success">₹{{ "%.2f"|format(bill.total) }}</span>
+            </div>
+            <div class="form-text">Total will be recalculated after update</div>
+          </div>
+
+          <div class="d-flex flex-column flex-sm-row gap-2">
+            <button type="submit" class="btn btn-warning btn-modern flex-grow-1">
+              <i class="bi bi-check-lg me-1"></i>Update Bill
+            </button>
+            <a href="/history" class="btn btn-outline-secondary btn-modern">
+              <i class="bi bi-x-lg me-1"></i>Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

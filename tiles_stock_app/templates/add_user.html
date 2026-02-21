@@ -1,0 +1,70 @@
+{% extends "base.html" %} {% block title %}Add User{% endblock %} {% block
+page_title %}Add New User{% endblock %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="modern-card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-person-plus-fill text-success me-2"></i>Create New
+          User
+        </h5>
+      </div>
+
+      <div class="card-body">
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label">Username <span class="text-danger">*</span></label>
+            <input type="text" name="username" class="form-control" placeholder="Enter username (min 3 chars)" required
+              minlength="3" />
+            <div class="form-text">Username must be unique</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" placeholder="user@example.com (optional)" />
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Password <span class="text-danger">*</span></label>
+                <input type="password" name="password" class="form-control" placeholder="Min 6 characters" required
+                  minlength="6" />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                <input type="password" name="confirm_password" class="form-control" placeholder="Re-enter password"
+                  required minlength="6" />
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Role <span class="text-danger">*</span></label>
+            <select name="role" class="form-select" required>
+              <option value="">-- Select Role --</option>
+              <option value="staff">Staff - Basic access</option>
+              <option value="admin">Admin - Full access</option>
+            </select>
+            <div class="form-text">
+              <strong>Staff:</strong> Can bill, view dashboard
+              <strong>Admin:</strong> Full access + user management
+            </div>
+          </div>
+
+          <div class="d-flex flex-column flex-sm-row gap-2">
+            <button type="submit" class="btn btn-gradient-success btn-modern flex-grow-1">
+              <i class="bi bi-check-lg me-1"></i>Create User
+            </button>
+            <a href="/admin/users" class="btn btn-outline-secondary btn-modern">
+              <i class="bi bi-x-lg me-1"></i>Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends 'base.html' %} {% block title %}Create Bill{% endblock %} {% block
+page_title %}Create New Bill{% endblock %} {% block content %}
+<form method="post" id="billingForm">
+  <!-- Customer Info Card -->
+  <div class="modern-card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="bi bi-person-fill me-2"></i>Customer Details
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <label class="form-label">Customer Name <span class="text-danger">*</span></label>
+          <input type="text" name="customer_name" class="form-control" placeholder="Enter customer name" required />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Mobile Number</label>
+          <input type="tel" name="customer_mobile" class="form-control" placeholder="Enter 10-digit mobile"
+            pattern="[0-9]{10}" maxlength="10" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tiles Selection Card -->
+  <div class="modern-card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-boxes me-2"></i>Select Tiles</h5>
+      <span class="badge bg-primary">{{ tiles|length }} tiles available</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table modern-table mb-0">
+          <thead>
+            <tr>
+              <th>Tile</th>
+              <th>Size</th>
+              <th>Price</th>
+              <th>Available</th>
+              <th style="width: 120px">Quantity</th>
+              <th style="width: 100px">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if tiles %} {% for tile in tiles %}
+            <tr class="{{ 'table-secondary' if tile.quantity == 0 else '' }}">
+              <td><strong>{{ tile.brand }}</strong></td>
+              <td>{{ tile.size }}</td>
+              <td class="price fw-semibold">
+                ₹{{ "%.2f"|format(tile.price) }}
+              </td>
+              <td>
+                {% if tile.quantity == 0 %}
+                <span class="badge badge-stock-out">Out</span>
+                {% elif tile.quantity < 10 %} <span class="badge badge-stock-low">{{ tile.quantity }}</span>
+                  {% else %}
+                  <span class="badge badge-stock-high">{{ tile.quantity }}</span>
+                  {% endif %}
+              </td>
+              <td>
+                <input type="number" name="qty_{{ tile.id }}" class="form-control form-control-sm qty" min="0" max="{{
+                tile.quantity }}" value="0" data-price="{{ tile.price }}" {% if tile.quantity==0 %}disabled{% endif %}>
+              </td>
+              <td class="row-total fw-semibold text-success">₹0.00</td>
+            </tr>
+            {% endfor %} {% else %}
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <i class="bi bi-inbox"></i>
+                  <h5>No tiles available</h5>
+                  <p>Add tiles to inventory first</p>
+                </div>
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Card -->
+  <div class="modern-card">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Bill Summary</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-md-3">
+          <label class="form-label">GST (%)</label>
+          <input type="number" id="gst" name="gst" class="form-control" value="18" min="0" max="100" />
+        </div>
+        <div class="col-sm-6 col-md-3">
+          <label class="form-label">Discount (₹)</label>
+          <input type="number" id="discount" name="discount" class="form-control" value="0" min="0" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">&nbsp;</label>
+          <div class="d-flex align-items-center h-100 pt-2">
+            <div class="stat-card w-100" style="padding: 1rem">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="stat-label">Grand Total</span>
+                <span class="stat-value" id="liveTotal">₹0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-end">
+        <a href="/dashboard" class="btn btn-outline-secondary btn-modern">
+          <i class="bi bi-x-lg me-1"></i>Cancel
+        </a>
+        <button type="submit" class="btn btn-gradient-primary btn-modern">
+          <i class="bi bi-receipt me-1"></i>Generate Invoice
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    function calculateTotal() {
+      let subtotal = 0;
+
+      document.querySelectorAll(".qty").forEach((input) => {
+        const qty = parseInt(input.value) || 0;
+        const price = parseFloat(input.dataset.price) || 0;
+        const rowTotal = qty * price;
+
+        // Update row total
+        const rowTotalCell = input.closest("tr").querySelector(".row-total");
+        rowTotalCell.textContent = "₹" + rowTotal.toFixed(2);
+
+        subtotal += rowTotal;
+      });
+
+      const gst = parseFloat(document.getElementById("gst").value) || 0;
+      const discount =
+        parseFloat(document.getElementById("discount").value) || 0;
+
+      const gstAmount = (subtotal * gst) / 100;
+      const grandTotal = subtotal + gstAmount - discount;
+
+      document.getElementById("liveTotal").textContent =
+        "₹" + grandTotal.toFixed(2);
+    }
+
+    document.querySelectorAll(".qty, #gst, #discount").forEach((el) => {
+      el.addEventListener("input", calculateTotal);
+    });
+  });
+</script>
+{% endblock %}

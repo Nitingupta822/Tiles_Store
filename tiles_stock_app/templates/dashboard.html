@@ -1,0 +1,192 @@
+{% extends 'base.html' %} {% block title %}Dashboard{% endblock %} {% block
+page_title %}Dashboard{% endblock %} {% block content %}
+<!-- Stats Row -->
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="stat-label mb-1">Total Tiles</p>
+          <h3 class="stat-value mb-0">{{ tiles|length }}</h3>
+        </div>
+        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+          <i class="bi bi-grid-3x3"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="stat-label mb-1">In Stock</p>
+          <h3 class="stat-value mb-0">
+            {{ tiles|selectattr('quantity', 'gt', 0)|list|length }}
+          </h3>
+        </div>
+        <div class="stat-icon" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%)">
+          <i class="bi bi-check-circle"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="stat-label mb-1">Low Stock</p>
+          <h3 class="stat-value mb-0">
+            {{ tiles|selectattr('quantity', 'lt', 10)|selectattr('quantity',
+            'gt', 0)|list|length }}
+          </h3>
+        </div>
+        <div class="stat-icon" style="background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%)">
+          <i class="bi bi-exclamation-triangle"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="stat-label mb-1">Out of Stock</p>
+          <h3 class="stat-value mb-0">
+            {{ tiles|selectattr('quantity', 'eq', 0)|list|length }}
+          </h3>
+        </div>
+        <div class="stat-icon" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%)">
+          <i class="bi bi-x-circle"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tiles Table Card -->
+<div class="modern-card">
+  <div
+    class="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+    <div>
+      <h5 class="mb-0"><i class="bi bi-boxes me-2"></i>Tile Inventory</h5>
+    </div>
+    <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
+      <form method="get" class="flex-grow-1">
+        <div class="input-group">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          <input type="text" name="search" class="form-control" placeholder="Search tiles..."
+            value="{{ request.args.get('search', '') }}" />
+        </div>
+      </form>
+      {% if session.get('role') == 'admin' %}
+      <a href="/stock_availability_pdf" class="btn btn-gradient-primary btn-modern btn-mobile-full">
+        <i class="bi bi-file-pdf me-1"></i>Download Stock PDF
+      </a>
+      <a href="/add_tile" class="btn btn-gradient-success btn-modern btn-mobile-full">
+        <i class="bi bi-plus-lg me-1"></i>Add Tile
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table modern-table mb-0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Brand</th>
+            <th>Size</th>
+            {% if session.get('role') == 'admin' %}
+            <th><i class="bi bi-lock-fill text-danger"></i> Buy Price</th>
+            {% endif %}
+            <th>Sell Price</th>
+            {% if session.get('role') == 'admin' %}
+            <th>Margin</th>
+            {% endif %}
+            <th>Stock</th>
+            {% if session.get('role') == 'admin' %}
+            <th class="text-end">Actions</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% if tiles %} {% for tile in tiles %}
+          <tr>
+            <td><span class="text-muted">#{{ tile.id }}</span></td>
+            <td><strong>{{ tile.brand }}</strong></td>
+            <td>{{ tile.size }}</td>
+            {% if session.get('role') == 'admin' %}
+            <td>
+              {% if tile.buy_price %}
+              <span class="text-danger fw-semibold">₹{{ "%.2f"|format(tile.buy_price) }}</span>
+              {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            {% endif %}
+            <td>
+              <span class="fw-semibold text-success">₹{{ "%.2f"|format(tile.price) }}</span>
+            </td>
+            {% if session.get('role') == 'admin' %}
+            <td>
+              {% if tile.buy_price and tile.price > 0 %} {% set margin =
+              ((tile.price - tile.buy_price) / tile.price * 100) %} {% if margin
+              >= 20 %}
+              <span class="badge badge-stock-high">{{ "%.0f"|format(margin) }}%</span>
+              {% elif margin >= 10 %}
+              <span class="badge badge-stock-low">{{ "%.0f"|format(margin) }}%</span>
+              {% else %}
+              <span class="badge badge-stock-out">{{ "%.0f"|format(margin) }}%</span>
+              {% endif %} {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            {% endif %}
+            <td>
+              {% if tile.quantity == 0 %}
+              <span class="badge badge-stock-out">Out of Stock</span>
+              {% elif tile.quantity < 10 %} <span class="badge badge-stock-low">Low: {{ tile.quantity }}</span>
+                {% else %}
+                <span class="badge badge-stock-high">{{ tile.quantity }}</span>
+                {% endif %}
+            </td>
+            {% if session.get('role') == 'admin' %}
+            <td class="text-end">
+              <a href="/edit_tile/{{ tile.id }}" class="btn btn-sm btn-outline-primary me-1">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button class="btn btn-sm btn-outline-danger"
+                onclick="confirmDelete('/delete_tile/{{ tile.id }}', '{{ tile.brand }}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %} {% else %}
+          <tr>
+            <td colspan="{{ 9 if session.get('role') == 'admin' else 4 }}">
+              <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <h5>No tiles found</h5>
+                <p class="mb-3">
+                  Start by adding your first tile to the inventory
+                </p>
+                {% if session.get('role') == 'admin' %}
+                <a href="/add_tile" class="btn btn-gradient-primary btn-modern">
+                  <i class="bi bi-plus-lg me-1"></i>Add First Tile
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

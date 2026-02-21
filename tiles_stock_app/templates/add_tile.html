@@ -1,0 +1,73 @@
+{% extends "base.html" %} {% block title %}{{ 'Edit Tile' if tile else 'Add
+Tile' }}{% endblock %} {% block page_title %}{{ 'Edit Tile' if tile else 'Add
+New Tile' }}{% endblock %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="modern-card">
+      <div class="card-header {{ 'bg-warning bg-opacity-10' if tile else '' }}">
+        <h5 class="mb-0">
+          {% if tile %}
+          <i class="bi bi-pencil-fill text-warning me-2"></i>Editing: {{
+          tile.brand }} {% else %}
+          <i class="bi bi-plus-circle-fill text-success me-2"></i>Add New Tile
+          {% endif %}
+        </h5>
+      </div>
+
+      <div class="card-body">
+        <form method="POST" id="tileForm">
+          <div class="mb-3">
+            <label class="form-label">Tile Brand <span class="text-danger">*</span></label>
+            <input type="text" name="brand" class="form-control" placeholder="e.g., Kajaria, Somany"
+              value="{{ tile.brand if tile else '' }}" required />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Tile Size <span class="text-danger">*</span></label>
+            <input type="text" name="size" class="form-control" placeholder="e.g., 2x2, 600x600 mm"
+              value="{{ tile.size if tile else '' }}" required />
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="bi bi-lock-fill text-danger"></i> Buy Price (₹)
+                  <span class="badge bg-danger ms-1">Admin Only</span>
+                </label>
+                <input type="number" name="buy_price" class="form-control" step="0.01" min="0" placeholder="Cost price"
+                  value="{{ tile.buy_price if tile and tile.buy_price else '' }}" />
+                <div class="form-text">Confidential - not visible to staff</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Selling Price (₹) <span class="text-danger">*</span></label>
+                <input type="number" name="price" class="form-control" step="0.01" min="0" placeholder="Selling price"
+                  value="{{ tile.price if tile else '' }}" required />
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Quantity in Stock <span class="text-danger">*</span></label>
+            <input type="number" name="quantity" class="form-control" min="0" placeholder="Available stock"
+              value="{{ tile.quantity if tile else '' }}" required />
+          </div>
+
+          <div class="d-flex flex-column flex-sm-row gap-2">
+            <button type="submit"
+              class="btn {{ 'btn-warning' if tile else 'btn-gradient-success' }} btn-modern flex-grow-1">
+              <i class="bi bi-{{ 'check-lg' if tile else 'plus-lg' }} me-1"></i>
+              {{ 'Update Tile' if tile else 'Save Tile' }}
+            </button>
+            <a href="/dashboard" class="btn btn-outline-secondary btn-modern">
+              <i class="bi bi-arrow-left me-1"></i>Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
