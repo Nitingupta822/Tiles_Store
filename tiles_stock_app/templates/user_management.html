@@ -1,5 +1,9 @@
-{% extends 'base.html' %} {% block title %}User Management{% endblock %} {%
-block page_title %}User Management{% endblock %} {% block content %}
+{% extends 'base.html' %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+
 <!-- Stats Row -->
 <div class="row g-4 mb-4">
   <div class="col-sm-6 col-lg-3">
@@ -18,59 +22,41 @@ block page_title %}User Management{% endblock %} {% block content %}
 
   <div class="col-sm-6 col-lg-3">
     <div class="stat-card">
-      <div class="d-flex align-items-center justify-content-between">
-        <div>
-          <p class="stat-label mb-1">Admins</p>
-          <h3 class="stat-value mb-0">
-            {{ users|selectattr('role', 'eq', 'admin')|list|length }}
-          </h3>
-        </div>
-        <div class="stat-icon" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%)">
-          <i class="bi bi-shield-lock"></i>
-        </div>
-      </div>
+      <p class="stat-label mb-1">Admins</p>
+      <h3 class="stat-value mb-0">
+        {{ users|selectattr('role', 'equalto', 'admin')|list|length }}
+      </h3>
     </div>
   </div>
 
   <div class="col-sm-6 col-lg-3">
     <div class="stat-card">
-      <div class="d-flex align-items-center justify-content-between">
-        <div>
-          <p class="stat-label mb-1">Staff</p>
-          <h3 class="stat-value mb-0">
-            {{ users|selectattr('role', 'eq', 'staff')|list|length }}
-          </h3>
-        </div>
-        <div class="stat-icon" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%)">
-          <i class="bi bi-person-badge"></i>
-        </div>
-      </div>
+      <p class="stat-label mb-1">Staff</p>
+      <h3 class="stat-value mb-0">
+        {{ users|selectattr('role', 'equalto', 'staff')|list|length }}
+      </h3>
     </div>
   </div>
 
   <div class="col-sm-6 col-lg-3">
     <div class="stat-card">
-      <div class="d-flex align-items-center justify-content-between">
-        <div>
-          <p class="stat-label mb-1">Active</p>
-          <h3 class="stat-value mb-0">
-            {{ users|selectattr('is_active')|list|length }}
-          </h3>
-        </div>
-        <div class="stat-icon" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%)">
-          <i class="bi bi-check-circle"></i>
-        </div>
-      </div>
+      <p class="stat-label mb-1">Active</p>
+      <h3 class="stat-value mb-0">
+        {{ users|selectattr('is_active')|list|length }}
+      </h3>
     </div>
   </div>
 </div>
 
 <!-- Users Table -->
 <div class="modern-card">
-  <div
-    class="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-    <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>All Users</h5>
-    <a href="/admin/users/create" class="btn btn-gradient-success btn-modern btn-mobile-full">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      <i class="bi bi-people-fill me-2"></i>All Users
+    </h5>
+
+    <a href="{{ url_for('create_user') }}"
+       class="btn btn-gradient-success btn-modern">
       <i class="bi bi-person-plus-fill me-1"></i>Add User
     </a>
   </div>
@@ -89,95 +75,92 @@ block page_title %}User Management{% endblock %} {% block content %}
           </tr>
         </thead>
         <tbody>
-          {% if users %} {% for user in users %}
+
+        {% if users %}
+          {% for user in users %}
           <tr>
             <td>
-              <div class="d-flex align-items-center">
-                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" style="
-                    width: 36px;
-                    height: 36px;
-                    color: #fff;
-                    font-weight: 600;
-                  ">
-                  {{ user.username[0]|upper }}
-                </div>
-                <div>
-                  <strong>{{ user.username }}</strong>
-                  {% if user.id == session.get('user_id') %}
-                  <span class="badge bg-info ms-1">You</span>
-                  {% endif %}
-                </div>
-              </div>
+              <strong>{{ user.username }}</strong>
+              {% if user.id == session.get('user_id') %}
+              <span class="badge bg-info ms-1">You</span>
+              {% endif %}
             </td>
+
             <td>{{ user.email or '—' }}</td>
+
             <td>
               {% if user.role == 'admin' %}
-              <span class="badge" style="background: linear-gradient(135deg, #eb3349, #f45c43)">Admin</span>
+              <span class="badge bg-danger">Admin</span>
               {% else %}
               <span class="badge bg-secondary">Staff</span>
               {% endif %}
             </td>
+
             <td>
               {% if user.is_active %}
-              <span class="badge badge-stock-high">Active</span>
+              <span class="badge bg-success">Active</span>
               {% else %}
-              <span class="badge badge-stock-out">Inactive</span>
+              <span class="badge bg-dark">Inactive</span>
               {% endif %}
             </td>
-            <td class="text-muted small">
-              {{ user.created_at.strftime('%d %b %Y') if user.created_at else
-              '—' }}
+
+            <td>
+              {{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}
             </td>
+
             <td class="text-end">
-              <a href="/admin/users/{{ user.id }}/edit" class="btn btn-sm btn-outline-primary">
+
+              <!-- EDIT BUTTON -->
+              <a href="{{ url_for('edit_user', user_id=user.id) }}"
+                 class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-pencil"></i>
               </a>
+
               {% if user.id != session.get('user_id') %}
-              <form action="/admin/users/{{ user.id }}/toggle-active" method="POST" class="d-inline">
-                <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if user.is_active else 'success' }}"
-                  title="{{ 'Deactivate' if user.is_active else 'Activate' }}">
+
+              <!-- ACTIVATE / DEACTIVATE -->
+              <form action="{{ url_for('toggle_user_status', user_id=user.id) }}"
+                    method="POST"
+                    class="d-inline">
+                <button type="submit"
+                        class="btn btn-sm btn-outline-{{ 'warning' if user.is_active else 'success' }}">
                   <i class="bi bi-{{ 'pause' if user.is_active else 'play' }}-fill"></i>
                 </button>
               </form>
-              <button class="btn btn-sm btn-outline-danger"
-                onclick="confirmDelete('/admin/users/{{ user.id }}/delete', '{{ user.username }}')">
-                <i class="bi bi-trash"></i>
-              </button>
+
+              <!-- DELETE -->
+              <form action="{{ url_for('delete_user', user_id=user.id) }}"
+                    method="POST"
+                    class="d-inline">
+                <button type="submit"
+                        onclick="return confirm('Delete {{ user.username }}?')"
+                        class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+
               {% endif %}
+
             </td>
           </tr>
-          {% endfor %} {% else %}
+          {% endfor %}
+
+        {% else %}
           <tr>
-            <td colspan="6">
-              <div class="empty-state">
-                <i class="bi bi-people"></i>
-                <h5>No users found</h5>
-                <p class="mb-3">Add your first team member</p>
-                <a href="/admin/users/create" class="btn btn-gradient-primary btn-modern">
-                  <i class="bi bi-person-plus-fill me-1"></i>Add User
-                </a>
-              </div>
+            <td colspan="6" class="text-center py-4">
+              <h5>No users found</h5>
+              <a href="{{ url_for('create_user') }}"
+                 class="btn btn-primary mt-2">
+                 Add User
+              </a>
             </td>
           </tr>
-          {% endif %}
+        {% endif %}
+
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- Note: Delete uses POST method, so we need a custom handler -->
-{% endblock %} {% block extra_js %}
-<script>
-  // Override confirmDelete for POST deletion
-  function confirmDelete(url, itemName) {
-    if (confirm(`Are you sure you want to delete ${itemName}?`)) {
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = url;
-      document.body.appendChild(form);
-      form.submit();
-    }
-  }
-</script>
 {% endblock %}
