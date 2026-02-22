@@ -247,42 +247,7 @@ def sales_report():
         total_sales=total_sales,
         total_bills=total_bills
     )
-
-# ================= EDIT TILE =================
-@app.route("/edit_tile/<int:id>", methods=["GET", "POST"])
-@admin_required
-def edit_tile(id):
-    tile = Tile.query.get_or_404(id)
-
-    if request.method == "POST":
-        tile.brand = request.form['brand']
-        tile.size = request.form['size']
-        tile.buy_price = float(request.form.get('buy_price') or 0)
-        tile.price = float(request.form['price'])
-        tile.quantity = int(request.form['quantity'])
-
-        db.session.commit()
-        flash("Tile updated successfully")
-        return redirect(url_for('dashboard'))
-
-    return render_template("edit_tile.html", tile=tile)
-
-# ================= EDIT USER =================
-@app.route("/edit_user/<int:id>", methods=["GET", "POST"])
-@admin_required
-def edit_user(id):
-    user = User.query.get_or_404(id)
-
-    if request.method == "POST":
-        user.email = request.form['email']
-        user.role = request.form['role']
-        user.is_active = True if request.form.get("is_active") == "on" else False
-
-        db.session.commit()
-        flash("User updated successfully")
-        return redirect(url_for('user_management'))
-
-    return render_template("edit_user.html", user=user)
+   
 # ================= INVOICE =================
 @app.route("/invoice/<int:bill_id>")
 @login_required
@@ -320,4 +285,5 @@ def health():
 # ================= LOCAL RUN =================
 if __name__ == "__main__":
     app.run(debug=True)
+
 
