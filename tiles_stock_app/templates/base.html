@@ -426,16 +426,18 @@
 
     <nav class="sidebar-nav">
       <div class="sidebar-section">Main Menu</div>
+      
+<a href="{{ url_for('dashboard') }}"
+   class="sidebar-link {{ 'active' if request.endpoint == 'dashboard' else '' }}">
+    <i class="bi bi-house-door"></i>
+    <span>Dashboard</span>
+</a>
 
-      <a href="/dashboard" class="sidebar-link {{ 'active' if request.path == '/dashboard' else '' }}">
-        <i class="bi bi-house-door"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="/billing" class="sidebar-link {{ 'active' if request.path == '/billing' else '' }}">
-        <i class="bi bi-receipt"></i>
-        <span>New Bill</span>
-      </a>
+ <a href="{{ url_for('billing') }}"
+   class="sidebar-link {{ 'active' if request.endpoint == 'billing' else '' }}">
+    <i class="bi bi-receipt"></i>
+    <span>New Bill</span>
+</a>
 
         <a href="{{ url_for('sales_history') }}"
      class="sidebar-link {{ 'active' if request.path == url_for('sales_history') else '' }}">
@@ -443,10 +445,11 @@
     <span>Sales History</span>
   </a>
 
-      <a href="/sales_report" class="sidebar-link {{ 'active' if request.path == '/sales_report' else '' }}">
-        <i class="bi bi-graph-up-arrow"></i>
-        <span>Sales Report</span>
-      </a>
+<a href="{{ url_for('sales_report') }}"
+   class="sidebar-link {{ 'active' if request.endpoint == 'sales_report' else '' }}">
+    <i class="bi bi-graph-up-arrow"></i>
+    <span>Sales Report</span>
+</a>
 
       {% if session.get('role') == 'admin' %}
       <div class="sidebar-section mt-3">Admin</div>
@@ -626,3 +629,4 @@
 
 
 </html>
+
