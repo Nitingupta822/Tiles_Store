@@ -1,1 +1,37 @@
+{% extends 'base.html' %} {% block title %}Internal Server Error{% endblock %}
+{% block page_title %}500 Error{% endblock %}
 
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="modern-card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Internal Server Error (500)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <p class="mb-0">
+                        <strong>Developer Info:</strong> I've caught this error and displayed the traceback below to
+                        help you fix it.
+                        Please share a screenshot or copy the text below and send it to me.
+                    </p>
+                </div>
+
+                <div class="bg-dark text-light p-3 rounded"
+                    style="font-family: monospace; font-size: 0.85rem; overflow-x: auto;">
+                    <pre class="mb-0">{{ error }}</pre>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <a href="/dashboard" class="btn btn-gradient-primary">
+                        <i class="bi bi-house-door me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
