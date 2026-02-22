@@ -123,7 +123,7 @@ def login():
 
             session['user_id'] = user.id
             session['role'] = user.role
-            session['username'] = user.username
+            session['user'] = user.username
             return redirect('/dashboard')
 
         flash("Invalid credentials")
@@ -165,6 +165,22 @@ def add_tile():
     return render_template("add_tile.html")
 
 
+@app.route("/edit_tile/<int:id>", methods=["GET", "POST"])
+@admin_required
+def edit_tile(id):
+    tile = Tile.query.get_or_404(id)
+    if request.method == "POST":
+        tile.brand = request.form['brand']
+        tile.size = request.form['size']
+        tile.buy_price = float(request.form.get('buy_price') or 0)
+        tile.price = float(request.form['price'])
+        tile.quantity = int(request.form['quantity'])
+        db.session.commit()
+        flash("Tile updated successfully")
+        return redirect("/dashboard")
+    return render_template("edit_tile.html", tile=tile)
+
+
 @app.route("/delete_tile/<int:id>")
 @admin_required
 def delete_tile(id):
@@ -175,12 +191,101 @@ def delete_tile(id):
     return redirect("/dashboard")
 
 
+@app.route("/stock_availability_pdf")
+@admin_required
+def stock_availability_pdf():
+    from xhtml2pdf import pisa
+    tiles = Tile.query.all()
+    html = render_template("stock_availability_pdf.html", tiles=tiles)
+    result = io.BytesIO()
+    pisa.CreatePDF(html, dest=result)
+    response = make_response(result.getvalue())
+    response.headers['Content-Type'] = "application/pdf"
+    response.headers['Content-Disposition'] = "attachment; filename=stock_availability.pdf"
+    return response
+
+
 # ================= USER MANAGEMENT =================
 @app.route("/user_management")
 @admin_required
 def user_management():
     users = User.query.all()
     return render_template("user_management.html", users=users)
+
+
+@app.route("/create_user", methods=["GET", "POST"])
+@admin_required
+def create_user():
+    if request.method == "POST":
+        username = request.form['username']
+        email = request.form.get('email')
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        role = request.form['role']
+
+        if password != confirm_password:
+            flash("Passwords do not match")
+            return render_template("add_user.html")
+        
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists")
+            return render_template("add_user.html")
+
+        user = User(
+            username=username,
+            email=email,
+            password=generate_password_hash(password),
+            role=role,
+            is_active=True
+        )
+        db.session.add(user)
+        db.session.commit()
+        flash("User created successfully")
+        return redirect(url_for("user_management"))
+
+    return render_template("add_user.html")
+
+
+@app.route("/edit_user/<int:user_id>", methods=["GET", "POST"])
+@admin_required
+def edit_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if request.method == "POST":
+        user.email = request.form.get('email')
+        user.role = request.form['role']
+        new_password = request.form.get('new_password')
+        if new_password:
+            user.password = generate_password_hash(new_password)
+        db.session.commit()
+        flash("User updated successfully")
+        return redirect(url_for("user_management"))
+    return render_template("edit_user.html", user=user)
+
+
+@app.route("/toggle_user_status/<int:user_id>", methods=["POST"])
+@admin_required
+def toggle_user_status(user_id):
+    if user_id == session.get('user_id'):
+        flash("Cannot deactivate yourself")
+        return redirect(url_for("user_management"))
+    user = User.query.get_or_404(user_id)
+    user.is_active = not user.is_active
+    db.session.commit()
+    flash(f"User {'activated' if user.is_active else 'deactivated'} successfully")
+    return redirect(url_for("user_management"))
+
+
+@app.route("/delete_user/<int:user_id>", methods=["POST"])
+@admin_required
+def delete_user(user_id):
+    if user_id == session.get('user_id'):
+        flash("Cannot delete yourself")
+        return redirect(url_for("user_management"))
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    flash("User deleted successfully")
+    return redirect(url_for("user_management"))
 
 
 # ================= BILLING =================
@@ -254,7 +359,17 @@ def sales_report():
 def invoice(bill_id):
     bill = Bill.query.get_or_404(bill_id)
     items = BillItem.query.filter_by(bill_id=bill_id).all()
-    return render_template("invoice.html", bill=bill, items=items)
+
+    # Construct WhatsApp Message
+    msg = f"Hello {bill.customer_name or 'Customer'},\n\n"
+    msg += f"Thank you for shopping with TileStock! 🛒\n\n"
+    msg += f"Your Invoice #{bill.id} details:\n"
+    msg += f"📅 Date: {bill.date.strftime('%d %b %Y') if bill.date else 'N/A'}\n"
+    msg += f"💰 Grand Total: ₹{bill.total:.2f}\n\n"
+    msg += "Please find your digital receipt attached or visit our store for more details.\n\n"
+    msg += "Regards,\nTileStock"
+
+    return render_template("invoice.html", bill=bill, items=items, whatsapp_message=msg)
 
 
 @app.route("/invoice_pdf/<int:bill_id>")
@@ -285,5 +400,3 @@ def health():
 # ================= LOCAL RUN =================
 if __name__ == "__main__":
     app.run(debug=True)
-
-
