@@ -9,6 +9,7 @@ from sqlalchemy import func
 from functools import wraps
 import io
 import os
+import traceback
 
 # ================= APP SETUP =================
 app = Flask(__name__)
@@ -169,22 +170,28 @@ def add_tile():
 @app.route("/edit_tile/<int:id>", methods=["GET", "POST"])
 @admin_required
 def edit_tile(id):
-    tile = Tile.query.get_or_404(id)
-    if request.method == "POST":
-        try:
-            tile.brand = request.form['brand']
-            tile.size = request.form['size']
-            tile.buy_price = float(request.form.get('buy_price') or 0)
-            tile.price = float(request.form['price'])
-            tile.quantity = int(request.form['quantity'])
-            db.session.commit()
-            flash("Tile updated successfully")
-            return redirect("/dashboard")
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Error updating tile: {str(e)}")
-            return render_template("edit_tile.html", tile=tile)
-    return render_template("edit_tile.html", tile=tile)
+    try:
+        tile = Tile.query.get_or_404(id)
+        if request.method == "POST":
+            try:
+                tile.brand = request.form['brand']
+                tile.size = request.form['size']
+                tile.buy_price = float(request.form.get('buy_price') or 0)
+                tile.price = float(request.form['price'])
+                tile.quantity = int(request.form['quantity'])
+                db.session.commit()
+                flash("Tile updated successfully")
+                return redirect("/dashboard")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error updating tile: {str(e)}")
+                return render_template("edit_tile.html", tile=tile)
+        return render_template("edit_tile.html", tile=tile)
+    except Exception as e:
+        err = traceback.format_exc()
+        print(f"DEBUG EDIT_TILE ERROR: {err}")
+        flash(f"System Error: {str(e)}")
+        return redirect("/dashboard")
 
 
 @app.route("/delete_tile/<int:id>")
@@ -298,44 +305,53 @@ def delete_user(user_id):
 @app.route("/billing", methods=["GET", "POST"])
 @login_required
 def billing():
-    tiles = Tile.query.all()
+    try:
+        tiles = Tile.query.all()
 
-    if request.method == "POST":
-        bill = Bill(
-            customer_name=request.form.get("customer_name"),
-            customer_mobile=request.form.get("customer_mobile"),
-            total=0,
-            gst=float(request.form.get("gst", 0)),
-            discount=float(request.form.get("discount", 0))
-        )
-        db.session.add(bill)
-        db.session.commit()
+        if request.method == "POST":
+            bill = Bill(
+                customer_name=request.form.get("customer_name"),
+                customer_mobile=request.form.get("customer_mobile"),
+                total=0,
+                gst=float(request.form.get("gst") or 0),
+                discount=float(request.form.get("discount") or 0)
+            )
+            db.session.add(bill)
+            db.session.commit()
 
-        subtotal = 0
+            subtotal = 0
 
-        for tile in tiles:
-            qty = int(request.form.get(f"qty_{tile.id}", 0))
-            if qty > 0 and tile.quantity >= qty:
-                tile.quantity -= qty
-                item_total = tile.price * qty
-                subtotal += item_total
+            for tile in tiles:
+                qty_str = request.form.get(f"qty_{tile.id}", "0")
+                qty = int(qty_str) if qty_str.isdigit() else 0
+                
+                if qty > 0 and tile.quantity >= qty:
+                    tile.quantity -= qty
+                    item_total = tile.price * qty
+                    subtotal += item_total
 
-                item = BillItem(
-                    bill_id=bill.id,
-                    tile_name=tile.brand,
-                    size=tile.size,
-                    price=tile.price,
-                    quantity=qty,
-                    total=item_total
-                )
-                db.session.add(item)
+                    item = BillItem(
+                        bill_id=bill.id,
+                        tile_name=tile.brand,
+                        size=tile.size,
+                        price=tile.price,
+                        quantity=qty,
+                        total=item_total
+                    )
+                    db.session.add(item)
 
-        bill.total = subtotal + (subtotal * bill.gst / 100) - bill.discount
-        db.session.commit()
+            bill.total = subtotal + (subtotal * bill.gst / 100) - bill.discount
+            db.session.commit()
 
-        return redirect(url_for("invoice", bill_id=bill.id))
+            return redirect(url_for("invoice", bill_id=bill.id))
 
-    return render_template("billing.html", tiles=tiles)
+        return render_template("billing.html", tiles=tiles)
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error in billing: {str(e)}")
+        # Log the error for Render logs
+        print(f"DEBUG BILLING ERROR: {str(e)}")
+        return redirect("/dashboard")
 
 
 # ================= SALES HISTORY =================
@@ -448,6 +464,15 @@ def invoice_pdf(bill_id):
     response.headers['Content-Type'] = "application/pdf"
     response.headers['Content-Disposition'] = f"attachment; filename=invoice_{bill.id}.pdf"
     return response
+
+
+# ================= GLOBAL ERROR HANDLER =================
+@app.errorhandler(500)
+def handle_500_error(e):
+    db.session.rollback()
+    err = traceback.format_exc()
+    print(f"GLOBAL 500 ERROR:\n{err}")
+    return render_template("500.html", error=err), 500
 
 
 # ================= HEALTH CHECK =================
