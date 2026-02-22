@@ -53,6 +53,7 @@ class Bill(db.Model):
     gst = db.Column(db.Float, default=0)
     discount = db.Column(db.Float, default=0)
     date = db.Column(db.DateTime, default=datetime.utcnow)
+    items = db.relationship('BillItem', backref='bill_ref', lazy=True, cascade="all, delete-orphan")
 
 
 class BillItem(db.Model):
@@ -170,14 +171,19 @@ def add_tile():
 def edit_tile(id):
     tile = Tile.query.get_or_404(id)
     if request.method == "POST":
-        tile.brand = request.form['brand']
-        tile.size = request.form['size']
-        tile.buy_price = float(request.form.get('buy_price') or 0)
-        tile.price = float(request.form['price'])
-        tile.quantity = int(request.form['quantity'])
-        db.session.commit()
-        flash("Tile updated successfully")
-        return redirect("/dashboard")
+        try:
+            tile.brand = request.form['brand']
+            tile.size = request.form['size']
+            tile.buy_price = float(request.form.get('buy_price') or 0)
+            tile.price = float(request.form['price'])
+            tile.quantity = int(request.form['quantity'])
+            db.session.commit()
+            flash("Tile updated successfully")
+            return redirect("/dashboard")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating tile: {str(e)}")
+            return render_template("edit_tile.html", tile=tile)
     return render_template("edit_tile.html", tile=tile)
 
 
@@ -340,6 +346,59 @@ def sales_history():
     return render_template("history.html", bills=bills)
 
 
+@app.route("/delete_bill/<int:id>")
+@admin_required
+def delete_bill(id):
+    bill = Bill.query.get_or_404(id)
+    # BillItems will be deleted automatically due to cascade
+    db.session.delete(bill)
+    db.session.commit()
+    flash("Invoice deleted successfully")
+    return redirect("/sales_history")
+
+
+@app.route("/edit_bill/<int:id>", methods=["GET", "POST"])
+@admin_required
+def edit_bill(id):
+    bill = Bill.query.get_or_404(id)
+    if request.method == "POST":
+        try:
+            bill.customer_name = request.form.get('customer_name')
+            bill.customer_mobile = request.form.get('customer_mobile')
+            bill.gst = float(request.form.get('gst') or 0)
+            bill.discount = float(request.form.get('discount') or 0)
+            
+            # Recalculate total
+            # We need to sum up items. If no backref, we query. 
+            # But I added backref 'bill_ref' or relationship 'items'.
+            items = BillItem.query.filter_by(bill_id=bill.id).all()
+            subtotal = sum(item.total for item in items)
+            bill.total = subtotal + (subtotal * bill.gst / 100) - bill.discount
+            
+            db.session.commit()
+            flash("Invoice updated successfully")
+            return redirect("/sales_history")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating invoice: {str(e)}")
+            return render_template("edit_bill.html", bill=bill)
+    return render_template("edit_bill.html", bill=bill)
+
+
+@app.route("/clear_history", methods=["POST"])
+@admin_required
+def clear_history():
+    try:
+        BillItem.query.delete()
+        Bill.query.delete()
+        db.session.commit()
+        flash("All sales history cleared")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error clearing history: {str(e)}")
+    return redirect("/sales_history")
+
+
 # ================= SALES REPORT =================
 @app.route("/sales_report")
 @admin_required
@@ -400,3 +459,5 @@ def health():
 # ================= LOCAL RUN =================
 if __name__ == "__main__":
     app.run(debug=True)
+
+
