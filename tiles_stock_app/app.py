@@ -185,8 +185,8 @@ def edit_tile(id):
             except Exception as e:
                 db.session.rollback()
                 flash(f"Error updating tile: {str(e)}")
-                return render_template("edit_tile.html", tile=tile)
-        return render_template("edit_tile.html", tile=tile)
+                return render_template("add_tile.html", tile=tile)
+        return render_template("add_tile.html", tile=tile)
     except Exception as e:
         err = traceback.format_exc()
         print(f"DEBUG EDIT_TILE ERROR: {err}")
