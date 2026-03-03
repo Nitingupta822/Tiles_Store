@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Login | TileStock</title>
+  <title>SSNV Store | Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Bootstrap 5 -->
@@ -210,10 +210,152 @@
         transform: translateY(-30px) rotate(180deg);
       }
     }
+
+    /* ===== WELCOME SPLASH SCREEN ===== */
+    #welcome-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.7s cubic-bezier(0.77, 0, 0.175, 1);
+    }
+
+    #welcome-splash.slide-up {
+      transform: translateY(-100%);
+    }
+
+    .splash-logo {
+      width: 90px;
+      height: 90px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      color: #fff;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 20px 60px rgba(102, 126, 234, 0.5);
+      animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both;
+    }
+
+    .splash-title {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s both;
+      background: linear-gradient(90deg, #fff 0%, #c4b5fd 50%, #fff 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s both,
+        shimmer 2s linear 1s infinite;
+    }
+
+    .splash-subtitle {
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.55);
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+      animation: fadeUp 0.6s ease 0.8s both;
+    }
+
+    .splash-dots {
+      display: flex;
+      gap: 8px;
+      margin-top: 2.5rem;
+      animation: fadeUp 0.6s ease 1s both;
+    }
+
+    .splash-dots span {
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      animation: blink 1.2s infinite;
+    }
+
+    .splash-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .splash-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.7);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% center;
+      }
+
+      100% {
+        background-position: -200% center;
+      }
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 0.3;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.3);
+      }
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- ===== WELCOME SPLASH SCREEN ===== -->
+  <div id="welcome-splash">
+    <div class="splash-logo">
+      <i class="bi bi-grid-3x3-gap-fill"></i>
+    </div>
+    <div class="splash-title">SSNV Store</div>
+    <div class="splash-subtitle">Tiles Stock Management</div>
+    <div class="splash-dots">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+  <!-- ========================= -->
+
   <div class="bg-shapes">
     <span></span>
     <span></span>
@@ -271,6 +413,19 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Hide splash screen after 2.5 seconds with a slide-up animation
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        var splash = document.getElementById('welcome-splash');
+        splash.classList.add('slide-up');
+        // Remove from DOM after animation completes
+        splash.addEventListener('transitionend', function () {
+          splash.remove();
+        });
+      }, 2500);
+    });
+  </script>
 </body>
 
 </html>
