@@ -435,17 +435,35 @@ def invoice(bill_id):
     bill = Bill.query.get_or_404(bill_id)
     items = BillItem.query.filter_by(bill_id=bill_id).all()
 
-    # Construct WhatsApp Message
-    msg = f"Hello {bill.customer_name or 'Customer'},\n\n"
-    msg += f"Thank you for shopping with TileStock! 🛒\n\n"
-    msg += f"Your Invoice #{bill.id} details:\n"
+ # Construct WhatsApp Message
+    msg = f"🏬 *SSNV Store*\n"
+    msg += f"━━━━━━━━━━━━━━━━━━\n"
+    msg += f"Dear {bill.customer_name or 'Customer'},\n"
+    msg += f"Thank you for shopping with us! 🙏\n\n"
+    msg += f"🧾 *Invoice #{bill.id}*\n"
     msg += f"📅 Date: {bill.date.strftime('%d %b %Y') if bill.date else 'N/A'}\n"
-    msg += f"💰 Grand Total: ₹{bill.total:.2f}\n\n"
-    msg += "Please find your digital receipt attached or visit our store for more details.\n\n"
-    msg += "Regards,\nTileStock"
+    msg += f"━━━━━━━━━━━━━━━━━━\n"
+    msg += f"🛒 *Items Purchased:*\n"
+
+    subtotal = 0
+    for i, item in enumerate(items, 1):
+        subtotal += item.total
+        msg += f"{i}. {item.tile_name} ({item.size})\n"
+        msg += f"   Qty: {item.quantity} × ₹{item.price:.2f} = ₹{item.total:.2f}\n"
+
+    msg += f"━━━━━━━━━━━━━━━━━━\n"
+    msg += f"Subtotal:  ₹{subtotal:.2f}\n"
+    if bill.gst:
+        msg += f"GST ({bill.gst}%): ₹{subtotal * bill.gst / 100:.2f}\n"
+    if bill.discount:
+        msg += f"Discount:  -₹{bill.discount:.2f}\n"
+    msg += f"━━━━━━━━━━━━━━━━━━\n"
+    msg += f"💰 *Grand Total: ₹{bill.total:.2f}*\n"
+    msg += f"━━━━━━━━━━━━━━━━━━\n\n"
+    msg += f"Have a great day! 😊\n"
+    msg += f"— SSNV Store Team"
 
     return render_template("invoice.html", bill=bill, items=items, whatsapp_message=msg)
-
 
 @app.route("/invoice_pdf/<int:bill_id>")
 @login_required
@@ -484,5 +502,6 @@ def health():
 # ================= LOCAL RUN =================
 if __name__ == "__main__":
     app.run(debug=True)
+
 
 
