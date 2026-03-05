@@ -15,7 +15,7 @@ New Tile' }}{% endblock %} {% block content %}
       </div>
 
       <div class="card-body">
-        <form method="POST" id="tileForm">
+        <form method="POST" id="tileForm" enctype="multipart/form-data">
           <div class="mb-3">
             <label class="form-label">Tile Brand <span class="text-danger">*</span></label>
             <input type="text" name="brand" class="form-control" placeholder="e.g., Kajaria, Somany"
@@ -55,6 +55,49 @@ New Tile' }}{% endblock %} {% block content %}
               value="{{ tile.quantity if tile else '' }}" required />
           </div>
 
+          <!-- ====== Tile Image Upload ====== -->
+          <div class="mb-4">
+            <label class="form-label">
+              <i class="bi bi-image me-1 text-primary"></i>Tile Image
+              <span class="text-muted small">(optional · PNG/JPG/GIF/WebP · max 5 MB)</span>
+            </label>
+
+            {% if tile and tile.image_filename %}
+            <!-- Current image preview when editing -->
+            <div id="currentImageWrapper" class="mb-2 text-center p-2 border rounded" style="background:#f8f9fa;">
+              <p class="text-muted small mb-1">Current Image</p>
+              <img id="currentImg" src="{{ url_for('uploaded_file', filename=tile.image_filename) }}"
+                alt="Current tile image"
+                style="max-height:160px; max-width:100%; border-radius:8px; object-fit:cover;" />
+              <div class="mt-2">
+                <label class="form-check-label text-danger small">
+                  <input type="checkbox" name="remove_image" value="1" id="removeImageChk" class="form-check-input me-1" />
+                  Remove current image
+                </label>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- File picker + instant preview -->
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <label for="tile_image" class="btn btn-outline-primary btn-sm mb-0">
+                <i class="bi bi-upload me-1"></i>
+                {{ 'Replace Image' if tile and tile.image_filename else 'Choose Image' }}
+              </label>
+              <input type="file" name="tile_image" id="tile_image" accept="image/*"
+                class="d-none" onchange="previewTileImage(event)" />
+              <span id="fileNameLabel" class="text-muted small">No file chosen</span>
+            </div>
+
+            <!-- New image preview box -->
+            <div id="newImagePreview" class="mt-3 text-center p-2 border rounded d-none" style="background:#f8f9fa;">
+              <p class="text-muted small mb-1">New Image Preview</p>
+              <img id="previewImg" src="#" alt="Preview"
+                style="max-height:160px; max-width:100%; border-radius:8px; object-fit:cover;" />
+            </div>
+          </div>
+          <!-- ====== End Image Upload ====== -->
+
           <div class="d-flex flex-column flex-sm-row gap-2">
             <button type="submit"
               class="btn {{ 'btn-warning' if tile else 'btn-gradient-success' }} btn-modern flex-grow-1">
@@ -70,4 +113,42 @@ New Tile' }}{% endblock %} {% block content %}
     </div>
   </div>
 </div>
+
+<script>
+  function previewTileImage(event) {
+    const file = event.target.files[0];
+    const label = document.getElementById('fileNameLabel');
+    const previewBox = document.getElementById('newImagePreview');
+    const previewImg = document.getElementById('previewImg');
+
+    if (file) {
+      label.textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        previewImg.src = e.target.result;
+        previewBox.classList.remove('d-none');
+      };
+      reader.readAsDataURL(file);
+
+      // Uncheck "remove image" if user picks a new file
+      const removeChk = document.getElementById('removeImageChk');
+      if (removeChk) removeChk.checked = false;
+    } else {
+      label.textContent = 'No file chosen';
+      previewBox.classList.add('d-none');
+    }
+  }
+
+  // When "Remove image" is checked, hide the new-image preview
+  const removeChk = document.getElementById('removeImageChk');
+  if (removeChk) {
+    removeChk.addEventListener('change', function () {
+      if (this.checked) {
+        document.getElementById('newImagePreview').classList.add('d-none');
+        document.getElementById('tile_image').value = '';
+        document.getElementById('fileNameLabel').textContent = 'No file chosen';
+      }
+    });
+  }
+</script>
 {% endblock %}
