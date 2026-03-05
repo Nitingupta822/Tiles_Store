@@ -1,9 +1,10 @@
 from flask import (
     Flask, render_template, request, redirect,
-    session, flash, make_response, url_for
+    session, flash, make_response, url_for, send_from_directory
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from datetime import datetime
 from sqlalchemy import func
 from functools import wraps
@@ -14,6 +15,18 @@ import traceback
 # ================= APP SETUP =================
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key')
+
+# ================= UPLOAD CONFIG =================
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5 MB limit
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 # ================= DATABASE CONFIG =================
 database_url = os.environ.get('DATABASE_URL')
@@ -44,6 +57,7 @@ class Tile(db.Model):
     buy_price = db.Column(db.Float)
     price = db.Column(db.Float, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
+    image_filename = db.Column(db.String(200), nullable=True)
 
 
 class Bill(db.Model):
@@ -70,6 +84,15 @@ class BillItem(db.Model):
 # ================= DATABASE INIT =================
 def init_db():
     db.create_all()
+
+    # Add image_filename column to tile table if it doesn't exist (migration for existing DBs)
+    try:
+        with db.engine.connect() as conn:
+            from sqlalchemy import text
+            conn.execute(text("ALTER TABLE tile ADD COLUMN image_filename VARCHAR(200)"))
+            conn.commit()
+    except Exception:
+        pass  # Column already exists or not SQLite — safe to ignore
 
     if not User.query.filter_by(username="admin").first():
         admin = User(
@@ -152,12 +175,23 @@ def dashboard():
 @admin_required
 def add_tile():
     if request.method == "POST":
+        image_filename = None
+        file = request.files.get('tile_image')
+        if file and file.filename and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            # Make filename unique using a timestamp prefix
+            import time
+            filename = f"{int(time.time())}_{filename}"
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            image_filename = filename
+
         tile = Tile(
             brand=request.form['brand'],
             size=request.form['size'],
             buy_price=float(request.form.get('buy_price') or 0),
             price=float(request.form['price']),
-            quantity=int(request.form['quantity'])
+            quantity=int(request.form['quantity']),
+            image_filename=image_filename
         )
         db.session.add(tile)
         db.session.commit()
@@ -179,6 +213,29 @@ def edit_tile(id):
                 tile.buy_price = float(request.form.get('buy_price') or 0)
                 tile.price = float(request.form['price'])
                 tile.quantity = int(request.form['quantity'])
+
+                # Handle image upload
+                file = request.files.get('tile_image')
+                if file and file.filename and allowed_file(file.filename):
+                    # Delete old image if it exists
+                    if tile.image_filename:
+                        old_path = os.path.join(app.config['UPLOAD_FOLDER'], tile.image_filename)
+                        if os.path.exists(old_path):
+                            os.remove(old_path)
+                    import time
+                    filename = secure_filename(file.filename)
+                    filename = f"{int(time.time())}_{filename}"
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    tile.image_filename = filename
+
+                # Handle image removal
+                if request.form.get('remove_image') == '1':
+                    if tile.image_filename:
+                        old_path = os.path.join(app.config['UPLOAD_FOLDER'], tile.image_filename)
+                        if os.path.exists(old_path):
+                            os.remove(old_path)
+                    tile.image_filename = None
+
                 db.session.commit()
                 flash("Tile updated successfully")
                 return redirect("/dashboard")
@@ -202,6 +259,11 @@ def delete_tile(id):
     db.session.commit()
     flash("Tile deleted successfully")
     return redirect("/dashboard")
+
+
+@app.route("/uploads/<filename>")
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route("/stock_availability_pdf")
